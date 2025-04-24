@@ -4,7 +4,6 @@ import React, { useMemo } from 'react';
 import { useInventory } from '@/hooks/useInventory';
 import { useTableState } from '@/hooks/useTableState';
 import { columns } from './columns';
-import { InventoryItem } from '@/types/inventory';
 import { TableHeader } from './table/TableHeader';
 import { TableStateHandlers } from './table/TableStateHandlers';
 import { MobileTableView } from './table/MobileTableView';
@@ -15,7 +14,7 @@ import { TablePagination } from './table/TablePagination';
 export function InventoryTable() {
   // Use our optimized inventory hook
   const { processedData, isLoading, error, useMockData, toggleMockData, mutate } = useInventory();
-  
+
   // Safely memoize data to prevent unnecessary re-renders
   const data = useMemo(() => {
     try {
@@ -26,9 +25,9 @@ export function InventoryTable() {
       return [];
     }
   }, [processedData]);
-  
+
   // Use extracted table state management
-  const { table, globalFilter, setGlobalFilter, pagination, setPagination } = useTableState(data, columns);
+  const { table, globalFilter, setGlobalFilter, setPagination } = useTableState(data, columns);
 
   // Function to reset filters when refreshing data
   const resetFilters = () => {
@@ -46,7 +45,7 @@ export function InventoryTable() {
       toggleMockData={toggleMockData}
     />
   );
-  
+
   // Return early if we're in a special state (loading, error, or empty)
   if (isLoading || error || !data || data.length === 0) {
     return stateHandler;
@@ -66,21 +65,21 @@ export function InventoryTable() {
           mutate={mutate}
           resetFilters={resetFilters}
         />
-        
+
         {/* Enhanced responsive table with full functionality */}
         <div className="overflow-x-auto bg-[#121212] rounded-lg"
              style={{ maxHeight: '70vh' }} // Limit height for large datasets
         >
           {/* Mobile responsive design */}
           <MobileTableView table={table} />
-          
+
           {/* Desktop table view */}
           <DesktopTableView table={table} />
         </div>
-        
+
         {/* Pagination controls */}
         <TablePagination table={table} />
-        
+
 
       </div>
     );

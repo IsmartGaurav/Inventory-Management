@@ -9,9 +9,8 @@ import {
   getFilteredRowModel,
   SortingState,
   ColumnFiltersState,
-
+  ColumnDef
 } from '@tanstack/react-table';
-import { InventoryItem } from '@/types/inventory';
 import { useEnhancedSearch } from './useEnhancedSearch';
 
 /**
@@ -22,8 +21,8 @@ import { useEnhancedSearch } from './useEnhancedSearch';
 import { RowData } from './useEnhancedSearch';
 
 export function useTableState<TData extends RowData>(
-  data: TData[], 
-  columns: any[]
+  data: TData[],
+  columns: ColumnDef<TData, any>[]
 ) {
   // Table state with optimization for performance
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -38,9 +37,9 @@ export function useTableState<TData extends RowData>(
   const table = useReactTable({
     data,
     columns,
-    state: { 
-      sorting, 
-      columnFilters, 
+    state: {
+      sorting,
+      columnFilters,
       globalFilter,
       pagination
     },

@@ -1,9 +1,11 @@
 "use client";
 
+import { RowData } from '@/hooks/useEnhancedSearch';
+
 interface TableStateProps {
   isLoading: boolean;
   error: Error | null;
-  data: any[];
+  data: RowData[];
   useMockData: boolean;
   toggleMockData: (useMock?: boolean) => Promise<void>;
 }
@@ -11,12 +13,12 @@ interface TableStateProps {
 /**
  * Component to handle different table states (loading, error, empty)
  */
-export function TableStateHandlers({ 
-  isLoading, 
-  error, 
-  data, 
-  useMockData, 
-  toggleMockData 
+export function TableStateHandlers({
+  isLoading,
+  error,
+  data,
+  useMockData,
+  toggleMockData
 }: TableStateProps) {
   // Handle loading state with improved UI
   if (isLoading) {
@@ -29,7 +31,7 @@ export function TableStateHandlers({
       </div>
     );
   }
-  
+
   // Handle error state with improved UX
   if (error) {
     const errorMessage = typeof error === 'object' && error !== null && 'message' in error
@@ -40,7 +42,7 @@ export function TableStateHandlers({
         <div className="text-red-400 mb-3">
           <span className="font-medium">Error loading inventory data:</span> {errorMessage}
         </div>
-        <button 
+        <button
           onClick={() => toggleMockData(true)}
           className="bg-amber-600 px-4 py-2 rounded text-white font-medium"
         >
@@ -49,14 +51,14 @@ export function TableStateHandlers({
       </div>
     );
   }
-  
+
   // Empty state with option to load mock data
   if (!data || data.length === 0) {
     return (
       <div className="w-full p-6 text-center bg-[#1A1A1A] rounded-lg shadow-lg">
         <div className="text-yellow-400 mb-3 font-medium">No inventory data available</div>
         {!useMockData && (
-          <button 
+          <button
             onClick={() => toggleMockData(true)}
             className="bg-amber-600 px-4 py-2 rounded text-white font-medium"
           >
@@ -66,7 +68,7 @@ export function TableStateHandlers({
       </div>
     );
   }
-  
+
   // Return null if we have data (main table will render)
   return null;
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { Table } from '@tanstack/react-table';
+import { RowData } from '@/hooks/useEnhancedSearch';
 
 interface TablePaginationProps {
-  table: Table<any>;
+  table: Table<RowData>;
 }
 
 /**
@@ -72,7 +73,7 @@ export function TablePagination({ table }: TablePaginationProps) {
             ))}
           </select>
         </div>
-        
+
         {/* Page navigation */}
         <div className="flex items-center gap-2">
           <button
@@ -89,7 +90,7 @@ export function TablePagination({ table }: TablePaginationProps) {
           >
             {'<'}
           </button>
-          
+
           <span className="text-white">
             Page{' '}
             <strong>
@@ -97,7 +98,7 @@ export function TablePagination({ table }: TablePaginationProps) {
               {table.getPageCount() || 1}
             </strong>
           </span>
-          
+
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
@@ -113,7 +114,7 @@ export function TablePagination({ table }: TablePaginationProps) {
             {'>>'}
           </button>
         </div>
-        
+
         {/* Page jump */}
         <div className="flex items-center gap-2">
           <span className="text-white">Go to page:</span>
@@ -130,7 +131,7 @@ export function TablePagination({ table }: TablePaginationProps) {
           />
         </div>
       </div>
-      
+
       {/* Statistics footer */}
       <div className="mt-3 text-gray-400 text-sm">
         <p>Showing {table.getRowModel().rows.length} of {table.getCoreRowModel().rows.length} entries</p>
