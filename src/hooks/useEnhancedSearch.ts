@@ -7,7 +7,7 @@ import { useMemo } from 'react';
  * This allows searching through both parent components and nested subcomponents
  */
 // Define interfaces to make the types more specific
-interface SearchableComponent {
+export interface SearchableComponent {
   component_name?: string;
   component_id?: string;
   sku_code?: string;
@@ -15,7 +15,7 @@ interface SearchableComponent {
   [key: string]: unknown;
 }
 
-interface RowData extends SearchableComponent {
+export interface RowData extends SearchableComponent {
   subcomponents?: SearchableComponent[];
 }
 

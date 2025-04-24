@@ -18,7 +18,10 @@ import { useEnhancedSearch } from './useEnhancedSearch';
  * Custom hook to manage table state and configuration
  * Extracts table state management logic from the table component
  */
-export function useTableState<TData>(
+// Import the RowData type from useEnhancedSearch
+import { RowData } from './useEnhancedSearch';
+
+export function useTableState<TData extends RowData>(
   data: TData[], 
   columns: any[]
 ) {
@@ -33,7 +36,7 @@ export function useTableState<TData>(
 
   // Create TanStack Table instance with all features enabled
   const table = useReactTable({
-    data: data as unknown as InventoryItem[],
+    data,
     columns,
     state: { 
       sorting, 
