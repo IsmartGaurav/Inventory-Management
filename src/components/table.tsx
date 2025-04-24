@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -9,372 +10,524 @@ import {
   getFilteredRowModel,
   SortingState,
   ColumnFiltersState,
-  VisibilityState,
 } from '@tanstack/react-table';
+import { Search, RefreshCw } from 'lucide-react';
+import { useInventory } from '@/hooks/useInventory';
 import { columns } from './columns';
-import { InventoryItem } from '@/types/inventory';
-import { ChevronUp, ChevronDown, Search, RefreshCw, AlertTriangle } from 'lucide-react';
-
-// Import mock data properly with ES modules syntax
-import { mockInventoryData } from '@/data/mockInventory';
 
 export function InventoryTable() {
-  // State management
-  const [data, setData] = useState<InventoryItem[] | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
+  // Table state with optimization for performance
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [useMockData, setUseMockData] = useState<boolean>(false);
-
-  // Fetch inventory data from API with fallback to mock data
-  const fetchInventoryData = async (useMock = false) => {
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
+  
+  // Use our optimized inventory hook
+  const { processedData, isLoading, error, useMockData, toggleMockData, mutate } = useInventory();
+  
+  // Safely memoize data to prevent unnecessary re-renders
+  const data = useMemo(() => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      // If useMock is true or we've previously set useMockData, use mock data
-      if (useMock || useMockData) {
-        console.log('Using mock inventory data');
-        setUseMockData(true);
-        setData(mockInventoryData);
-        return;
-      }
-      
-      // Otherwise, try to fetch from API
-      const API_URL = '/api/inventory';
-      console.log('Fetching inventory data from internal API route');
-      
-      const response = await fetch(API_URL, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch inventory data: ${response.status} ${response.statusText}`);
-      }
-      
-      const responseData = await response.json();
-      
-      if (!responseData || responseData.error) {
-        console.warn('API returned error or empty data, falling back to mock data');
-        setUseMockData(true);
-        setData(mockInventoryData);
-      } else {
-        console.log('Inventory data fetched successfully:', responseData.length, 'items');
-        setData(responseData);
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      console.error('Error fetching inventory data:', errorMessage);
-      setError(err instanceof Error ? err : new Error(errorMessage));
-      console.log('Falling back to mock data due to error');
-      setUseMockData(true);
-      setData(mockInventoryData);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Memoize fetchInventoryData function to avoid dependency issues
-  const memoizedFetchData = useCallback(fetchInventoryData, []);
-  
-  // Fetch data on component mount
-  useEffect(() => {
-    memoizedFetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Process data to extract subcomponents with parent component information
-  const processedData = useMemo(() => {
-    if (!data) return [];
-
-    // Extract subcomponents and add parent component name for display
-    const flattenedData = data.flatMap(parentItem => {
-      // Only process items that have subcomponents
-      if (parentItem.subcomponents && parentItem.subcomponents.length > 0) {
-        // Map each subcomponent to include parent component name
-        return parentItem.subcomponents.map(subcomp => ({
-          ...subcomp,
-          parent_component_name: parentItem.component_name
-        }));
-      }
+      if (!processedData || !Array.isArray(processedData)) return [];
+      return processedData;
+    } catch (e) {
+      console.error('Error accessing data:', e);
       return [];
-    });
-
-    console.log('Processed data:', flattenedData.length, 'subcomponents found');
-    return flattenedData;
-  }, [data]);
+    }
+  }, [processedData]);
   
-  // Table instance with all features
+  // Log data for debugging - delete in production
+  useEffect(() => {
+    console.log(`Table data: ${data.length} items`);
+  }, [data.length]);
+  
+  // Create optimized TanStack Table instance
   const table = useReactTable({
-    data: processedData,
+    data,
     columns,
-    state: {
-      sorting,
-      columnFilters,
+    state: { 
+      sorting, 
+      columnFilters, 
       globalFilter,
-      columnVisibility,
+      pagination
     },
-    enableSorting: true,
-    enableFilters: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
-    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    enableRowSelection: false,  // Disable for better performance
+    manualPagination: false,     // Let TanStack handle pagination
     initialState: {
-      pagination: {
-        pageSize: 5,
-      },
-      // Default sorting by parent component name
-      sorting: [
-        { id: 'parent_component_name', desc: false }
-      ],
+      pagination: { pageIndex: 0, pageSize: 10 },
+      sorting: [{ id: 'parent_component_name', desc: false }],
     },
   });
 
-  // Loading, error and empty states
+  // Handle loading state with improved UI
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8 bg-[#1A1A1A] rounded-lg">
-        <div className="flex items-center gap-2 text-white">
-          <RefreshCw className="animate-spin h-5 w-5" />
-          <span>Loading inventory data...</span>
+      <div className="w-full p-6 text-center bg-[#1A1A1A] rounded-lg shadow-lg">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin mr-2 h-6 w-6 border-t-2 border-blue-500 rounded-full"></div>
+          <span className="text-white font-medium">Loading inventory data...</span>
         </div>
       </div>
     );
   }
   
+  // Handle error state with improved UX
   if (error) {
+    const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+      ? String(error.message)
+      : 'Unknown error';
     return (
-      <div className="flex items-center justify-center p-8 bg-[#1A1A1A] rounded-lg">
-        <div className="flex items-center gap-2 text-red-400">
-          <AlertTriangle className="h-5 w-5" />
-          <span>Error loading inventory: {error.message}</span>
+      <div className="w-full p-6 text-center bg-[#1A1A1A] rounded-lg shadow-lg">
+        <div className="text-red-400 mb-3">
+          <span className="font-medium">Error loading inventory data:</span> {errorMessage}
         </div>
+        <button 
+          onClick={() => toggleMockData(true)}
+          className="bg-amber-600 px-4 py-2 rounded text-white font-medium"
+        >
+          Load Mock Data Instead
+        </button>
       </div>
     );
   }
   
-  if (!data || processedData.length === 0) {
+  // Empty state with option to load mock data
+  if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center p-8 bg-[#1A1A1A] rounded-lg">
-        <span className="text-yellow-400">No inventory data found.</span>
+      <div className="w-full p-6 text-center bg-[#1A1A1A] rounded-lg shadow-lg">
+        <div className="text-yellow-400 mb-3 font-medium">No inventory data available</div>
+        {!useMockData && (
+          <button 
+            onClick={() => toggleMockData(true)}
+            className="bg-amber-600 px-4 py-2 rounded text-white font-medium"
+          >
+            Load Mock Data
+          </button>
+        )}
       </div>
     );
   }
 
-  return (
-    <div className="w-full p-4 md:p-6 bg-[#1A1A1A] rounded-lg shadow-lg">
-      {/* Header with title and search/filter */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h2 className="text-xl md:text-2xl font-bold text-white">Inventory Components</h2>
-        
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          {/* Global search input */}
-          <div className="relative flex-1 md:flex-auto">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={globalFilter ?? ''}
-              onChange={e => setGlobalFilter(e.target.value)}
-              placeholder="Search inventory..."
-              className="block w-full bg-[#232323] text-white border-0 rounded-md py-2 pl-10 pr-3 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+  // Safely render the fully-featured table with error boundary
+  try {
+    return (
+      <div className="w-full p-4 bg-[#1A1A1A] rounded-lg shadow-lg">
+        {/* Header with title and search bar */}
+        <div className="bg-black p-4 rounded-t-lg border-b border-gray-800">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <h1 className="text-xl font-bold text-white">Inventory Components</h1>
           
-          {/* Action buttons */}
-          <div className="flex space-x-2">
-            {/* Refresh button */}
-            <button
-              onClick={() => fetchInventoryData(false)}
-              className="inline-flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 focus:outline-none"
-              title="Refresh data from API"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              <span>Refresh</span>
-            </button>
-            
-            {/* Toggle mock data button */}
-            <button
-              onClick={() => fetchInventoryData(!useMockData)}
-              className={`inline-flex items-center justify-center px-3 py-2 text-white text-sm rounded-md focus:outline-none ${useMockData ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}`}
-              title={useMockData ? 'Using mock data - Click to try API' : 'Using API data - Click for mock data'}
-            >
-              <span>{useMockData ? 'Using Mock' : 'Using API'}</span>
-            </button>
+            {/* Search and controls - responsive layout */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              {/* Global search input with icon */}
+              <div className="relative w-full sm:w-auto mb-2 sm:mb-0">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  value={globalFilter || ''}
+                  onChange={e => setGlobalFilter(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full sm:w-64 bg-[#232323] pl-8 pr-3 py-2 rounded text-white"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                {/* Data source toggle button */}
+                <button
+                  onClick={() => toggleMockData()}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded"
+                  title={useMockData ? 'Currently using mock data' : 'Currently using API data'}
+                >
+                  {useMockData ? 'Mock Data' : 'API Data'}
+                </button>
+                  
+                {/* Refresh button */}
+                <button
+                  onClick={() => mutate()}
+                  className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded flex items-center justify-center"
+                  title="Refresh data"
+                >
+                  <RefreshCw className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Responsive table container */}
-      <div className="overflow-x-auto bg-[#121212] rounded-lg shadow-xl">
-        <table className="min-w-full divide-y divide-gray-800">
-          <thead className="bg-[#1E1E1E]">
-            {table.getHeaderGroups().map(headerGroup => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    className="px-3 md:px-6 py-3 md:py-4 text-left font-bold text-sm md:text-base tracking-wider text-white"
-                  >
-                    {header.isPlaceholder ? null : (
-                      <div className="flex items-center gap-2">
-                        {/* Column header with sort button */}
-                        <button
-                          onClick={header.column.getToggleSortingHandler()}
-                          className={`flex items-center gap-1 ${header.column.getCanSort() ? 'cursor-pointer select-none' : ''}`}
-                          title={header.column.getCanSort() ? `Sort by ${header.column.id}` : undefined}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+        
+        {/* Enhanced responsive table with full functionality */}
+        <div className="overflow-x-auto bg-[#121212] rounded-lg"
+             style={{ maxHeight: '70vh' }} // Limit height for large datasets
+        >
+          {/* Mobile responsive design - show all values clearly */}
+          <div className="block md:hidden">
+            {data.map((parent, parentIndex) => {
+              // Skip empty parent components
+              if (!parent.component_name) return null;
+              
+              // Get unique subcomponents (remove duplicates)
+              const subcomponents = parent.subcomponents || [];
+              const uniqueSubcomponents = subcomponents.reduce((acc: any[], curr: any) => {
+                const exists = acc.find(item => item.component_id === curr.component_id);
+                if (!exists) acc.push(curr);
+                return acc;
+              }, []);
+              
+              return (
+                <div key={parent.component_id || parentIndex} className="mb-4 border border-gray-800 rounded-md">
+                  {/* Parent component header */}
+                  <div className="bg-[#1E1E1E] p-3 font-bold text-white rounded-t-md">
+                    {parent.component_name}
+                  </div>
+                  
+                  {/* Subcomponents with values */}
+                  <div className="bg-black rounded-b-md">
+                    {uniqueSubcomponents.length > 0 ? (
+                      uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                        <div key={`${parent.component_id}-${subItem.component_id}-${subIndex}`} 
+                             className="border-t border-gray-800 p-3">
+                          {/* Subcomponent name */}
+                          <div className="text-white mb-2 font-medium">
+                            {subItem.component_name}
+                          </div>
                           
-                          {/* Sort indicators */}
-                          {{
-                            asc: <ChevronUp className="h-4 w-4 text-blue-400" />,
-                            desc: <ChevronDown className="h-4 w-4 text-blue-400" />,
-                          }[header.column.getIsSorted() as string] ?? null}
-                        </button>
-                        
-                        {/* Column filter input (only for columns that can be filtered) */}
-                        {header.column.getCanFilter() ? (
-                          <input
-                            type="text"
-                            value={(header.column.getFilterValue() as string) ?? ''}
-                            onChange={e => header.column.setFilterValue(e.target.value)}
-                            placeholder={`Filter...`}
-                            className="mt-1 w-full text-xs bg-[#2A2A2A] text-white border-0 rounded p-1 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        ) : null}
+                          {/* Values in 2x2 grid for better visibility */}
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Available:</span>
+                              <span className="text-green-400 font-medium">{subItem.usable_quantity || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Replaced:</span>
+                              <span className="text-white font-medium">{subItem.damaged_quantity || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Damaged:</span>
+                              <span className="text-white font-medium">{subItem.discarded_quantity || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Total:</span>
+                              <span className="text-white font-medium">{subItem.total_quantity || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 text-gray-500 italic text-sm">
+                        No subcomponents found
                       </div>
                     )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="bg-black divide-y divide-gray-800">
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map(row => (
-                <tr key={row.id} className="hover:bg-[#1E1E1E] transition-colors duration-150">
-                  {row.getVisibleCells().map(cell => (
-                    <td
-                      key={cell.id}
-                      className="px-3 md:px-6 py-2 md:py-4 text-sm md:text-md text-gray-300"
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : (
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          {/* Desktop table view */}
+          <div className="hidden md:block">
+          
+          <table className="w-full divide-y divide-gray-800">
+            {/* Fixed headers for grouped view */}
+            <thead className="bg-[#1E1E1E] sticky top-0 z-10">
               <tr>
-                <td
-                  colSpan={table.getAllColumns().length}
-                  className="px-6 py-4 text-center text-sm text-gray-400"
-                >
-                  No results found
-                </td>
+                <th className="px-4 py-3 text-left text-sm">
+                  <span className="font-bold text-white">Parent Component</span>
+                </th>
+                <th className="px-4 py-3 text-left text-sm">
+                  <span className="font-bold text-white">Sub Component</span>
+                </th>
+                <th className="px-4 py-3 text-left text-sm">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-white">Available Qty</span>
+                    {/* Filter for Available Qty */}
+                    <input
+                      value={(table.getColumn('usable_quantity')?.getFilterValue() as string) ?? ''}
+                      onChange={e => table.getColumn('usable_quantity')?.setFilterValue(e.target.value)}
+                      placeholder="Filter..."
+                      className="w-full text-xs bg-[#2A2A2A] text-white rounded p-1"
+                    />
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-sm">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-white">Replaced</span>
+                    {/* Filter for Replaced */}
+                    <input
+                      value={(table.getColumn('damaged_quantity')?.getFilterValue() as string) ?? ''}
+                      onChange={e => table.getColumn('damaged_quantity')?.setFilterValue(e.target.value)}
+                      placeholder="Filter..."
+                      className="w-full text-xs bg-[#2A2A2A] text-white rounded p-1"
+                    />
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-sm">
+                  <div className="flex flex-col gap-1">
+                    <span className="font-bold text-white">Damaged</span>
+                    {/* Filter for Damaged */}
+                    <input
+                      value={(table.getColumn('discarded_quantity')?.getFilterValue() as string) ?? ''}
+                      onChange={e => table.getColumn('discarded_quantity')?.setFilterValue(e.target.value)}
+                      placeholder="Filter..."
+                      className="w-full text-xs bg-[#2A2A2A] text-white rounded p-1"
+                    />
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-sm">
+                  <span className="font-bold text-white">Total Quantity</span>
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      
-      {/* Pagination Controls - Responsive design */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 text-white">
-        {/* Page size selector */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-400">Rows per page:</label>
-          <select
-            value={table.getState().pagination.pageSize}
-            onChange={e => table.setPageSize(Number(e.target.value))}
-            className="bg-[#232323] text-white border-0 rounded py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            {[5, 10, 20, 50].map(pageSize => (
-              <option key={pageSize} value={pageSize}>
-                {pageSize}
-              </option>
-            ))}
-          </select>
+            </thead>
+            
+            {/* Grouped table body with parent components and their subcomponents */}
+            <tbody className="bg-black divide-y divide-gray-800">
+              {data.map((parent, parentIndex) => {
+                // Skip empty parent components
+                if (!parent.component_name) return null;
+                
+                // Get unique subcomponents (remove duplicates)
+                const subcomponents = parent.subcomponents || [];
+                const uniqueSubcomponents = subcomponents.reduce((acc: any[], curr: any) => {
+                  const exists = acc.find(item => item.component_id === curr.component_id);
+                  if (!exists) acc.push(curr);
+                  return acc;
+                }, []);
+                
+                return (
+                  <tr key={parent.component_id || parentIndex} className="hover:bg-[#1E1E1E]">
+                    {/* Parent component - vertically centered */}
+                    <td className="px-4 py-2 text-sm text-gray-300 align-middle">
+                      {parent.component_name}
+                    </td>
+                    
+                    {/* Subcomponents as a list within a single cell */}
+                    <td className="px-4 py-2 text-sm text-gray-300">
+                      {uniqueSubcomponents.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                            <div key={`${subItem.component_id || subIndex}`}>
+                              {subItem.component_name}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 italic">No subcomponents</span>
+                      )}
+                    </td>
+                    
+                    {/* Available quantities as a list */}
+                    <td className="px-4 py-2 text-sm">
+                      {uniqueSubcomponents.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                            <div key={`${subItem.component_id || subIndex}-usable`}>
+                              <span className="text-green-400">{subItem.usable_quantity || 0}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </td>
+                    
+                    {/* Replaced quantities as a list */}
+                    <td className="px-4 py-2 text-sm text-gray-300">
+                      {uniqueSubcomponents.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                            <div key={`${subItem.component_id || subIndex}-damaged`}>
+                              {subItem.damaged_quantity || 0}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </td>
+                    
+                    {/* Damaged quantities as a list */}
+                    <td className="px-4 py-2 text-sm text-gray-300">
+                      {uniqueSubcomponents.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                            <div key={`${subItem.component_id || subIndex}-discarded`}>
+                              {subItem.discarded_quantity || 0}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </td>
+                    
+                    {/* Total quantities as a list */}
+                    <td className="px-4 py-2 text-sm text-gray-300">
+                      {uniqueSubcomponents.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                            <div key={`${subItem.component_id || subIndex}-total`}>
+                              {subItem.total_quantity || 0}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          </div>
         </div>
         
-        {/* Pagination navigation */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-            className={`px-3 py-1 rounded ${!table.getCanPreviousPage() ? 'bg-gray-800 text-gray-500' : 'bg-[#232323] hover:bg-[#2A2A2A]'}`}
-            aria-label="First page"
-          >
-            «
-          </button>
-          <button
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className={`px-3 py-1 rounded ${!table.getCanPreviousPage() ? 'bg-gray-800 text-gray-500' : 'bg-[#232323] hover:bg-[#2A2A2A]'}`}
-            aria-label="Previous page"
-          >
-            ‹
-          </button>
-          
-          <span className="flex items-center gap-1 text-sm">
-            <span className="hidden sm:inline">Page</span>
-            <strong>
-              {table.getState().pagination.pageIndex + 1} of{' '}
-              {table.getPageCount()}
-            </strong>
-          </span>
-          
-          <button
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className={`px-3 py-1 rounded ${!table.getCanNextPage() ? 'bg-gray-800 text-gray-500' : 'bg-[#232323] hover:bg-[#2A2A2A]'}`}
-            aria-label="Next page"
-          >
-            ›
-          </button>
-          <button
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-            className={`px-3 py-1 rounded ${!table.getCanNextPage() ? 'bg-gray-800 text-gray-500' : 'bg-[#232323] hover:bg-[#2A2A2A]'}`}
-            aria-label="Last page"
-          >
-            »
-          </button>
+        {/* Pagination controls */}
+        <div className="mt-4 p-3 border-t border-gray-800">
+          {/* Mobile pagination - simplified for small screens */}
+          <div className="flex flex-col space-y-3 md:hidden">
+            {/* Simple page navigation */}
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="px-3 py-1 bg-[#232323] rounded disabled:opacity-50"
+              >
+                Previous
+              </button>
+              
+              <span className="text-white">
+                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+              </span>
+              
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="px-3 py-1 bg-[#232323] rounded disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+            
+            {/* Simple page size selector */}
+            <div className="flex justify-center items-center">
+              <span className="mr-2 text-white">Show:</span>
+              <select
+                value={table.getState().pagination.pageSize}
+                onChange={e => table.setPageSize(Number(e.target.value))}
+                className="bg-[#232323] text-white rounded px-3 py-1"
+              >
+                {[10, 20, 50].map(pageSize => (
+                  <option key={pageSize} value={pageSize}>
+                    {pageSize} rows
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Desktop pagination - full controls */}
+          <div className="hidden md:flex flex-wrap justify-between items-center">
+            {/* Page size selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-white">Rows per page:</span>
+              <select
+                value={table.getState().pagination.pageSize}
+                onChange={e => table.setPageSize(Number(e.target.value))}
+                className="bg-[#232323] text-white rounded px-2 py-1"
+              >
+                {[10, 20, 50, 100].map(pageSize => (
+                  <option key={pageSize} value={pageSize}>
+                    {pageSize}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Page navigation */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => table.setPageIndex(0)}
+                disabled={!table.getCanPreviousPage()}
+                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+              >
+                {'<<'}
+              </button>
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+              >
+                {'<'}
+              </button>
+              
+              <span className="text-white">
+                Page{' '}
+                <strong>
+                  {table.getState().pagination.pageIndex + 1} of{' '}
+                  {table.getPageCount() || 1}
+                </strong>
+              </span>
+              
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+              >
+                {'>'}
+              </button>
+              <button
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                disabled={!table.getCanNextPage()}
+                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+              >
+                {'>>'}
+              </button>
+            </div>
+            
+            {/* Page jump */}
+            <div className="flex items-center gap-2">
+              <span className="text-white">Go to page:</span>
+              <input
+                type="number"
+                defaultValue={table.getState().pagination.pageIndex + 1}
+                onChange={e => {
+                  const page = e.target.value ? Number(e.target.value) - 1 : 0;
+                  table.setPageIndex(page);
+                }}
+                className="bg-[#232323] text-white rounded px-2 py-1 w-16"
+                min={1}
+                max={table.getPageCount()}
+              />
+            </div>
+          </div>
         </div>
         
-        {/* Page jump controls */}
-        <div className="hidden md:flex items-center gap-2">
-          <span className="text-sm text-gray-400">Go to page:</span>
-          <input
-            type="number"
-            min={1}
-            max={table.getPageCount()}
-            defaultValue={table.getState().pagination.pageIndex + 1}
-            onChange={e => {
-              const page = e.target.value ? Number(e.target.value) - 1 : 0;
-              table.setPageIndex(page);
-            }}
-            className="bg-[#232323] text-white border-0 rounded w-16 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
+        {/* Statistics footer */}
+        <div className="mt-3 text-gray-400 text-sm">
+          <p>Showing {table.getRowModel().rows.length} of {data.length} entries</p>
         </div>
       </div>
-    </div>
-  );
+    );
+  } catch (e) {
+    console.error('Error rendering table component:', e);
+    // Fallback UI if anything fails during rendering
+    return (
+      <div className="p-6 text-center text-red-400 bg-[#1A1A1A] rounded-lg">
+        <p className="text-lg font-medium mb-2">Error rendering table</p>
+        <p>There was an error displaying the table. Please try refreshing the page.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
 }

@@ -13,8 +13,13 @@ export async function GET() {
     const API_URL = 'https://dev.electorq.com/dummy/inventory';
     console.log('Fetching from:', API_URL);
     
-    // Fetch data from the external API with explicit headers
-    const response = await fetch(API_URL, {
+    // Create a timeout promise to avoid hanging API calls
+    const timeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('API request timed out after 5 seconds')), 5000)
+    );
+
+    // Race the fetch against a timeout
+    const fetchPromise = fetch(API_URL, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -25,14 +30,26 @@ export async function GET() {
       next: { revalidate: 0 }
     });
     
+    // Use Promise.race to implement a timeout
+    const response = await Promise.race([fetchPromise, timeout]) as Response;
+    
     console.log('Response status:', response.status);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
     }
     
-    // Parse the response to JSON
-    const data = await response.json();
+    // Parse the response to JSON with a timeout as well
+    const responseJson = await Promise.race([
+      response.json(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('JSON parsing timed out')), 3000))
+    ]);
+    
+    // Validate data structure
+    const data = Array.isArray(responseJson) ? responseJson : [];
+    if (!Array.isArray(responseJson)) {
+      console.warn('API did not return an array, using empty array instead');
+    }
     console.log('Data fetched successfully:', data ? `${data.length} items` : 'No data');
     
     // Mock data for testing if API fails - uncomment for testing

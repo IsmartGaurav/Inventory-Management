@@ -12,7 +12,7 @@ export const columns = [
     header: () => <span className="font-bold text-white">Parent Component</span>,
     cell: info => info.getValue() || 'N/A',
     enableSorting: true,
-    enableColumnFilter: true,
+    enableColumnFilter: false, // Removed filter as requested
   }),
 
   // Component Name Column
@@ -20,7 +20,7 @@ export const columns = [
     header: () => <span className="font-bold text-white">Sub Component</span>,
     cell: info => info.getValue(),
     enableSorting: true,
-    enableColumnFilter: true,
+    enableColumnFilter: false, // Removed filter as requested
   }),
 
   // Available/Usable Quantity Column
@@ -57,6 +57,9 @@ export const columns = [
 
   // Alert Status Column
   columnHelper.accessor(row => {
+    // Add null checks to prevent crashes
+    if (!row) return 'Unknown';
+    
     const usable = row.usable_quantity || 0;
     const total = row.total_quantity || 0;
     // Consider low stock if less than 30% of total available
@@ -67,6 +70,7 @@ export const columns = [
   }, {
     id: 'alert',
     header: () => <span className="font-bold text-white">Alert</span>,
+    enableColumnFilter: false, // Removed filter as requested
     cell: info => {
       const status = info.getValue();
       if (status === 'Out of Stock') {
@@ -84,11 +88,14 @@ export const columns = [
 
   // Action Column
   columnHelper.accessor(row => {
+    // Add null checks to prevent crashes
+    if (!row) return '';
     const usable = row.usable_quantity || 0;
     return usable < 10 ? 'Raise STO' : '';
   }, {
     id: 'action',
     header: () => <span className="font-bold text-white">Action</span>,
+    enableColumnFilter: false, // Removed filter as requested
     cell: info => {
       const action = info.getValue();
       return action ? (
