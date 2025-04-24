@@ -14,6 +14,7 @@ import {
 import { Search, RefreshCw } from 'lucide-react';
 import { useInventory } from '@/hooks/useInventory';
 import { columns } from './columns';
+import { InventoryItem } from '@/types/inventory';
 
 export function InventoryTable() {
   // Table state with optimization for performance
@@ -36,14 +37,9 @@ export function InventoryTable() {
     }
   }, [processedData]);
   
-  // Log data for debugging - delete in production
-  useEffect(() => {
-    console.log(`Table data: ${data.length} items`);
-  }, [data.length]);
-  
-  // Create optimized TanStack Table instance
+  // Create TanStack Table instance with all features enabled
   const table = useReactTable({
-    data,
+    data, // Use data directly from the hook
     columns,
     state: { 
       sorting, 
@@ -51,6 +47,10 @@ export function InventoryTable() {
       globalFilter,
       pagination
     },
+    enableFilters: true,
+    enableColumnFilters: true,
+    enableGlobalFilter: true,
+    enableSorting: true,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
@@ -59,12 +59,10 @@ export function InventoryTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    enableRowSelection: false,  // Disable for better performance
-    manualPagination: false,     // Let TanStack handle pagination
     initialState: {
       pagination: { pageIndex: 0, pageSize: 10 },
-      sorting: [{ id: 'parent_component_name', desc: false }],
     },
+    debugTable: true,
   });
 
   // Handle loading state with improved UI
@@ -165,9 +163,10 @@ export function InventoryTable() {
         <div className="overflow-x-auto bg-[#121212] rounded-lg"
              style={{ maxHeight: '70vh' }} // Limit height for large datasets
         >
-          {/* Mobile responsive design - show all values clearly */}
+          {/* Mobile responsive design with filtered data */}
           <div className="block md:hidden">
-            {data.map((parent, parentIndex) => {
+            {table.getRowModel().rows.map(row => {
+              const parent = row.original;
               // Skip empty parent components
               if (!parent.component_name) return null;
               
@@ -180,7 +179,7 @@ export function InventoryTable() {
               }, []);
               
               return (
-                <div key={parent.component_id || parentIndex} className="mb-4 border border-gray-800 rounded-md">
+                <div key={row.id} className="mb-4 border border-gray-800 rounded-md">
                   {/* Parent component header */}
                   <div className="bg-[#1E1E1E] p-3 font-bold text-white rounded-t-md">
                     {parent.component_name}
@@ -237,56 +236,90 @@ export function InventoryTable() {
             <thead className="bg-[#1E1E1E] sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-sm">
-                  <span className="font-bold text-white">Parent Component</span>
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => table.getColumn('component_name')?.toggleSorting()}
+                  >
+                    <span className="font-bold text-white">Parent Component</span>
+                    {table.getColumn('component_name')?.getIsSorted() === 'asc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                    ) : table.getColumn('component_name')?.getIsSorted() === 'desc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m6 9 6 6 6-6"/></svg>
+                    ) : null}
+                  </div>
                 </th>
                 <th className="px-4 py-3 text-left text-sm">
-                  <span className="font-bold text-white">Sub Component</span>
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => table.getColumn('subcomponent_name')?.toggleSorting()}
+                  >
+                    <span className="font-bold text-white">Sub Component</span>
+                    {table.getColumn('subcomponent_name')?.getIsSorted() === 'asc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                    ) : table.getColumn('subcomponent_name')?.getIsSorted() === 'desc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m6 9 6 6 6-6"/></svg>
+                    ) : null}
+                  </div>
                 </th>
                 <th className="px-4 py-3 text-left text-sm">
-                  <div className="flex flex-col gap-1">
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer" 
+                    onClick={() => table.getColumn('usable_quantity')?.toggleSorting()}
+                  >
                     <span className="font-bold text-white">Available Qty</span>
-                    {/* Filter for Available Qty */}
-                    <input
-                      value={(table.getColumn('usable_quantity')?.getFilterValue() as string) ?? ''}
-                      onChange={e => table.getColumn('usable_quantity')?.setFilterValue(e.target.value)}
-                      placeholder="Filter..."
-                      className="w-full text-xs bg-[#2A2A2A] text-white rounded p-1"
-                    />
+                    {table.getColumn('usable_quantity')?.getIsSorted() === 'asc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                    ) : table.getColumn('usable_quantity')?.getIsSorted() === 'desc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m6 9 6 6 6-6"/></svg>
+                    ) : null}
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left text-sm">
-                  <div className="flex flex-col gap-1">
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => table.getColumn('damaged_quantity')?.toggleSorting()}
+                  >
                     <span className="font-bold text-white">Replaced</span>
-                    {/* Filter for Replaced */}
-                    <input
-                      value={(table.getColumn('damaged_quantity')?.getFilterValue() as string) ?? ''}
-                      onChange={e => table.getColumn('damaged_quantity')?.setFilterValue(e.target.value)}
-                      placeholder="Filter..."
-                      className="w-full text-xs bg-[#2A2A2A] text-white rounded p-1"
-                    />
+                    {table.getColumn('damaged_quantity')?.getIsSorted() === 'asc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                    ) : table.getColumn('damaged_quantity')?.getIsSorted() === 'desc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m6 9 6 6 6-6"/></svg>
+                    ) : null}
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left text-sm">
-                  <div className="flex flex-col gap-1">
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => table.getColumn('discarded_quantity')?.toggleSorting()}
+                  >
                     <span className="font-bold text-white">Damaged</span>
-                    {/* Filter for Damaged */}
-                    <input
-                      value={(table.getColumn('discarded_quantity')?.getFilterValue() as string) ?? ''}
-                      onChange={e => table.getColumn('discarded_quantity')?.setFilterValue(e.target.value)}
-                      placeholder="Filter..."
-                      className="w-full text-xs bg-[#2A2A2A] text-white rounded p-1"
-                    />
+                    {table.getColumn('discarded_quantity')?.getIsSorted() === 'asc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                    ) : table.getColumn('discarded_quantity')?.getIsSorted() === 'desc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m6 9 6 6 6-6"/></svg>
+                    ) : null}
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left text-sm">
-                  <span className="font-bold text-white">Total Quantity</span>
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => table.getColumn('total_quantity')?.toggleSorting()}
+                  >
+                    <span className="font-bold text-white">Total Quantity</span>
+                    {table.getColumn('total_quantity')?.getIsSorted() === 'asc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m18 15-6-6-6 6"/></svg>
+                    ) : table.getColumn('total_quantity')?.getIsSorted() === 'desc' ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="m6 9 6 6 6-6"/></svg>
+                    ) : null}
+                  </div>
                 </th>
               </tr>
             </thead>
             
-            {/* Grouped table body with parent components and their subcomponents */}
+            {/* Table body with proper filtering and sorting */}
             <tbody className="bg-black divide-y divide-gray-800">
-              {data.map((parent, parentIndex) => {
+              {table.getRowModel().rows.map(row => {
+                const parent = row.original;
                 // Skip empty parent components
                 if (!parent.component_name) return null;
                 
@@ -299,7 +332,7 @@ export function InventoryTable() {
                 }, []);
                 
                 return (
-                  <tr key={parent.component_id || parentIndex} className="hover:bg-[#1E1E1E]">
+                  <tr key={row.id} className="hover:bg-[#1E1E1E]">
                     {/* Parent component - vertically centered */}
                     <td className="px-4 py-2 text-sm text-gray-300 align-middle">
                       {parent.component_name}
@@ -393,13 +426,13 @@ export function InventoryTable() {
           <div className="flex flex-col space-y-3 md:hidden">
             {/* Simple page navigation */}
             <div className="flex justify-between items-center">
-              <button
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="px-3 py-1 bg-[#232323] rounded disabled:opacity-50"
-              >
-                Previous
-              </button>
+                <button
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className="px-3 py-1 bg-[#232323] text-white rounded disabled:opacity-50"
+                >
+                  Previous
+                </button>
               
               <span className="text-white">
                 Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
@@ -408,7 +441,7 @@ export function InventoryTable() {
               <button
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
-                className="px-3 py-1 bg-[#232323] rounded disabled:opacity-50"
+                className="px-3 py-1 bg-[#232323] text-white rounded disabled:opacity-50"
               >
                 Next
               </button>
@@ -422,7 +455,7 @@ export function InventoryTable() {
                 onChange={e => table.setPageSize(Number(e.target.value))}
                 className="bg-[#232323] text-white rounded px-3 py-1"
               >
-                {[10, 20, 50].map(pageSize => (
+                {[5, 10, 20, 50, 100].map(pageSize => (
                   <option key={pageSize} value={pageSize}>
                     {pageSize} rows
                   </option>
@@ -441,7 +474,7 @@ export function InventoryTable() {
                 onChange={e => table.setPageSize(Number(e.target.value))}
                 className="bg-[#232323] text-white rounded px-2 py-1"
               >
-                {[10, 20, 50, 100].map(pageSize => (
+                {[5, 10, 20, 50, 100].map(pageSize => (
                   <option key={pageSize} value={pageSize}>
                     {pageSize}
                   </option>
@@ -454,14 +487,14 @@ export function InventoryTable() {
               <button
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
-                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+                className="px-2 py-1 bg-[#232323] text-white rounded disabled:opacity-50"
               >
                 {'<<'}
               </button>
               <button
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
-                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+                className="px-2 py-1 bg-[#232323] text-white rounded disabled:opacity-50"
               >
                 {'<'}
               </button>
@@ -477,14 +510,14 @@ export function InventoryTable() {
               <button
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
-                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+                className="px-2 py-1 bg-[#232323] text-white rounded disabled:opacity-50"
               >
                 {'>'}
               </button>
               <button
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
-                className="px-2 py-1 bg-[#232323] rounded disabled:opacity-50"
+                className="px-2 py-1 bg-[#232323] text-white rounded disabled:opacity-50"
               >
                 {'>>'}
               </button>

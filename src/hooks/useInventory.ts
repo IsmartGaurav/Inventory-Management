@@ -143,11 +143,12 @@ export function useInventory() {
     }, [inventoryData]); // Only recompute when source data changes
     
     return {
-        data: inventoryData,
+        data: sourceData,
         processedData,
-        isLoading: isLoading && !useMockData,
+        isLoading,
         error,
         useMockData,
-        toggleMockData
+        toggleMockData,
+        mutate // Export the mutate function from SWR
     };
 }

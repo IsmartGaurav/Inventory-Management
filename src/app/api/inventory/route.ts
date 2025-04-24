@@ -1,7 +1,4 @@
-// API route to proxy requests to the external inventory API
 import { NextResponse } from 'next/server';
-
-// Force dynamic rendering to avoid caching issues
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
@@ -38,41 +35,18 @@ export async function GET() {
     if (!response.ok) {
       throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
     }
-    
-    // Parse the response to JSON with a timeout as well
+
     const responseJson = await Promise.race([
       response.json(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('JSON parsing timed out')), 3000))
     ]);
-    
-    // Validate data structure
+
     const data = Array.isArray(responseJson) ? responseJson : [];
     if (!Array.isArray(responseJson)) {
       console.warn('API did not return an array, using empty array instead');
     }
     console.log('Data fetched successfully:', data ? `${data.length} items` : 'No data');
     
-    // Mock data for testing if API fails - uncomment for testing
-    /*
-    const mockData = [
-      {
-        component_id: 'BAT01',
-        component_name: 'Battery Pack',
-        subcomponents: [
-          {
-            component_id: 'BATCELL01',
-            component_name: 'Battery Cell',
-            usable_quantity: 120,
-            damaged_quantity: 2,
-            discarded_quantity: 1,
-            total_quantity: 123
-          }
-        ]
-      }
-    ];
-    */
-    
-    // Return the data with explicit headers to ensure no caching
     return new NextResponse(JSON.stringify(data), {
       status: 200,
       headers: {
