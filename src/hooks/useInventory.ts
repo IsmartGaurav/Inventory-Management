@@ -29,7 +29,6 @@ export function useInventory() {
     
     // Use mock data as fallback when needed
     const sourceData = useMockData || error ? mockInventoryData : data || [];
-    const inventoryData = Array.isArray(sourceData) ? sourceData : [];
     
     // Toggle function with proper error handling
     const toggleMockData = async (useMock = !useMockData) => {
@@ -43,6 +42,8 @@ export function useInventory() {
     
     // Completely redesigned data processing to create a grouped structure by parent component
     const processedData = useMemo(() => {
+        // Ensure source data is an array
+        const inventoryData = Array.isArray(sourceData) ? sourceData : [];
         // Define interface for processed inventory items
         interface ProcessedInventoryItem {
             component_id: string;
@@ -175,7 +176,7 @@ export function useInventory() {
         }
         
         return groupedItems;
-    }, [inventoryData]); // Only recompute when source data changes
+    }, [sourceData]); // Only recompute when source data changes
     
     return {
         data: sourceData,

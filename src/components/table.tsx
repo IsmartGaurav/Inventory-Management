@@ -14,6 +14,9 @@ import { Search, RefreshCw } from 'lucide-react';
 import { useInventory } from '@/hooks/useInventory';
 import { columns } from './columns';
 
+// Import the InventoryItem type for use in the table
+import { InventoryItem } from '@/types/inventory';
+
 // Define interface for subcomponent structure
 interface Subcomponent {
   component_id: string;
@@ -48,7 +51,7 @@ export function InventoryTable() {
   
   // Create TanStack Table instance with all features enabled
   const table = useReactTable({
-    data, // Use data directly from the hook
+    data: data as unknown as InventoryItem[],
     columns,
     state: { 
       sorting, 
@@ -334,11 +337,11 @@ export function InventoryTable() {
                 
                 // Get unique subcomponents (remove duplicates)
                 const subcomponents = parent.subcomponents || [];
-                const uniqueSubcomponents = subcomponents.reduce((acc: any[], curr: any) => {
+                const uniqueSubcomponents = subcomponents.reduce((acc: Subcomponent[], curr: Subcomponent) => {
                   const exists = acc.find(item => item.component_id === curr.component_id);
                   if (!exists) acc.push(curr);
                   return acc;
-                }, []);
+                }, [] as Subcomponent[]);
                 
                 return (
                   <tr key={row.id} className="hover:bg-[#1E1E1E]">
