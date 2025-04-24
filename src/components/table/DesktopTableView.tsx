@@ -1,10 +1,11 @@
 "use client";
 
 import { Table } from '@tanstack/react-table';
-import { Subcomponent } from '@/types/inventory';
+import { Subcomponent } from '@/types/component';
+import { RowData } from '@/hooks/useEnhancedSearch';
 
 interface DesktopTableViewProps {
-  table: Table<any>;
+  table: Table<RowData>;
 }
 
 /**
@@ -18,7 +19,7 @@ export function DesktopTableView({ table }: DesktopTableViewProps) {
         <thead className="bg-[#1E1E1E] sticky top-0 z-10">
           <tr>
             <th className="px-4 py-3 text-left text-sm">
-              <div 
+              <div
                 className="flex items-center gap-2 cursor-pointer"
                 onClick={() => table.getColumn('component_name')?.toggleSorting()}
               >
@@ -36,8 +37,8 @@ export function DesktopTableView({ table }: DesktopTableViewProps) {
               </div>
             </th>
             <th className="px-4 py-3 text-left text-sm">
-              <div 
-                className="flex items-center gap-2 cursor-pointer" 
+              <div
+                className="flex items-center gap-2 cursor-pointer"
                 onClick={() => table.getColumn('usable_quantity')?.toggleSorting()}
               >
                 <span className="font-bold text-white">Available Qty</span>
@@ -81,29 +82,31 @@ export function DesktopTableView({ table }: DesktopTableViewProps) {
             </th>
           </tr>
         </thead>
-        
+
         {/* Table body with proper filtering and sorting */}
         <tbody className="bg-black divide-y divide-gray-800">
           {table.getRowModel().rows.map(row => {
             const parent = row.original;
             // Skip empty parent components
             if (!parent.component_name) return null;
-            
+
             // Get unique subcomponents (remove duplicates)
             const subcomponents = parent.subcomponents || [];
-            const uniqueSubcomponents = subcomponents.reduce((acc: Subcomponent[], curr: Subcomponent) => {
+            // Cast to Subcomponent[] to ensure type compatibility
+            const typedSubcomponents = subcomponents as unknown as Subcomponent[];
+            const uniqueSubcomponents = typedSubcomponents.reduce((acc: Subcomponent[], curr: Subcomponent) => {
               const exists = acc.find(item => item.component_id === curr.component_id);
               if (!exists) acc.push(curr);
               return acc;
             }, [] as Subcomponent[]);
-            
+
             return (
               <tr key={row.id} className="hover:bg-[#1E1E1E]">
                 {/* Parent component - vertically centered */}
                 <td className="px-4 py-2 text-sm text-gray-300 align-middle">
                   {parent.component_name}
                 </td>
-                
+
                 {/* Subcomponents as a list within a single cell */}
                 <td className="px-4 py-2 text-sm text-gray-300">
                   {uniqueSubcomponents.length > 0 ? (
@@ -118,7 +121,7 @@ export function DesktopTableView({ table }: DesktopTableViewProps) {
                     <span className="text-gray-500 italic">No subcomponents</span>
                   )}
                 </td>
-                
+
                 {/* Available quantities as a list */}
                 <td className="px-4 py-2 text-sm">
                   {uniqueSubcomponents.length > 0 ? (
@@ -133,7 +136,7 @@ export function DesktopTableView({ table }: DesktopTableViewProps) {
                     <span className="text-gray-500">-</span>
                   )}
                 </td>
-                
+
                 {/* Replaced quantities as a list */}
                 <td className="px-4 py-2 text-sm text-gray-300">
                   {uniqueSubcomponents.length > 0 ? (
@@ -148,7 +151,7 @@ export function DesktopTableView({ table }: DesktopTableViewProps) {
                     <span className="text-gray-500">-</span>
                   )}
                 </td>
-                
+
                 {/* Damaged quantities as a list */}
                 <td className="px-4 py-2 text-sm text-gray-300">
                   {uniqueSubcomponents.length > 0 ? (
@@ -163,7 +166,7 @@ export function DesktopTableView({ table }: DesktopTableViewProps) {
                     <span className="text-gray-500">-</span>
                   )}
                 </td>
-                
+
                 {/* Total quantities as a list */}
                 <td className="px-4 py-2 text-sm text-gray-300">
                   {uniqueSubcomponents.length > 0 ? (

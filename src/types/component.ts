@@ -11,4 +11,5 @@ export interface Subcomponent {
   total_quantity?: number;
   sku_code?: string;
   hsn_code?: string;
+  [key: string]: unknown; // Add index signature to make compatible with SearchableComponent
 }

@@ -9,6 +9,7 @@ import { TableStateHandlers } from './table/TableStateHandlers';
 import { MobileTableView } from './table/MobileTableView';
 import { DesktopTableView } from './table/DesktopTableView';
 import { TablePagination } from './table/TablePagination';
+import { RowData } from '@/hooks/useEnhancedSearch';
 
 
 export function InventoryTable() {
@@ -19,7 +20,8 @@ export function InventoryTable() {
   const data = useMemo(() => {
     try {
       if (!processedData || !Array.isArray(processedData)) return [];
-      return processedData;
+      // Cast the data to RowData[] to ensure compatibility with the table
+      return processedData as unknown as RowData[];
     } catch (e) {
       console.error('Error accessing data:', e);
       return [];

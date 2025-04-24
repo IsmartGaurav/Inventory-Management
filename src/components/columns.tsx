@@ -1,10 +1,10 @@
 'use client';
 
 import { createColumnHelper } from '@tanstack/react-table';
-import { InventoryItem } from '@/types/inventory';
+import { RowData } from '@/hooks/useEnhancedSearch';
 import { AlertCircle } from 'lucide-react';
 
-const columnHelper = createColumnHelper<InventoryItem>();
+const columnHelper = createColumnHelper<RowData>();
 
 export const columns = [
   // Parent Component Column
@@ -28,8 +28,8 @@ export const columns = [
     header: () => <span className="font-bold text-white">Available Qty</span>,
     cell: info => {
       const value = info.getValue();
-      return value !== undefined ? 
-        <span className="text-green-400">{value}</span> : 
+      return value !== undefined ?
+        <span className="text-green-400">{String(value)}</span> :
         'N/A';
     },
     enableSorting: true,
@@ -59,9 +59,9 @@ export const columns = [
   columnHelper.accessor(row => {
     // Add null checks to prevent crashes
     if (!row) return 'Unknown';
-    
-    const usable = row.usable_quantity || 0;
-    const total = row.total_quantity || 0;
+
+    const usable = Number(row.usable_quantity || 0);
+    const total = Number(row.total_quantity || 0);
     // Consider low stock if less than 30% of total available
     if (total > 0 && usable / total < 0.3) {
       return usable === 0 ? 'Out of Stock' : 'Low Stock';
@@ -90,7 +90,7 @@ export const columns = [
   columnHelper.accessor(row => {
     // Add null checks to prevent crashes
     if (!row) return '';
-    const usable = row.usable_quantity || 0;
+    const usable = Number(row.usable_quantity || 0);
     return usable < 10 ? 'Raise STO' : '';
   }, {
     id: 'action',
@@ -99,7 +99,7 @@ export const columns = [
     cell: info => {
       const action = info.getValue();
       return action ? (
-        <button 
+        <button
           className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium py-1 px-2 rounded-md"
         >
           Raise STO
