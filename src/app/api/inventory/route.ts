@@ -67,10 +67,10 @@ export async function GET() {
     });
     
   } catch (error: Error | unknown) {
-    const err = error as Error;
-    console.error('Error fetching inventory data:', err);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching inventory data:', errorMessage);
     return new NextResponse(
-      JSON.stringify({ error: err.message || 'Failed to fetch inventory data' }),
+      JSON.stringify({ error: errorMessage || 'Failed to fetch inventory data' }),
       { 
         status: 500,
         headers: {

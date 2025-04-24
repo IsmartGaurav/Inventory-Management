@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -14,10 +14,11 @@ import {
 import { columns } from './columns';
 import { InventoryItem } from '@/types/inventory';
 import { ChevronUp, ChevronDown, Search, RefreshCw, AlertTriangle } from 'lucide-react';
+
+// Import mock data properly with ES modules syntax
 import { mockInventoryData } from '@/data/mockInventory';
 
 export function InventoryTable() {
-  
   // State management
   const [data, setData] = useState<InventoryItem[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -69,10 +70,10 @@ export function InventoryTable() {
         console.log('Inventory data fetched successfully:', responseData.length, 'items');
         setData(responseData);
       }
-    } catch (err: Error | unknown) {
-      const error = err as Error;
-      console.error('Error fetching inventory data:', error.message);
-      setError(error instanceof Error ? error : new Error(String(err)));
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Error fetching inventory data:', errorMessage);
+      setError(err instanceof Error ? err : new Error(errorMessage));
       console.log('Falling back to mock data due to error');
       setUseMockData(true);
       setData(mockInventoryData);
@@ -81,9 +82,12 @@ export function InventoryTable() {
     }
   };
 
+  // Memoize fetchInventoryData function to avoid dependency issues
+  const memoizedFetchData = useCallback(fetchInventoryData, []);
+  
   // Fetch data on component mount
   useEffect(() => {
-    fetchInventoryData();
+    memoizedFetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
