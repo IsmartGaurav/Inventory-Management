@@ -246,11 +246,6 @@ npm start
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-## 📫 Contact
-
-Your Name - [@your_twitter](https://twitter.com/your_twitter) - email@example.com
-
-Project Link: [https://github.com/your-username/baaz-inventory](https://github.com/your-username/baaz-inventory)
 
 ---
 
