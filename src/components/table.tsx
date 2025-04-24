@@ -14,10 +14,9 @@ import {
 import { columns } from './columns';
 import { InventoryItem } from '@/types/inventory';
 import { ChevronUp, ChevronDown, Search, RefreshCw, AlertTriangle } from 'lucide-react';
+import { mockInventoryData } from '@/data/mockInventory';
 
 export function InventoryTable() {
-  // Import mock data for fallback
-  const { mockInventoryData } = require('@/data/mockInventory');
   
   // State management
   const [data, setData] = useState<InventoryItem[] | null>(null);
@@ -70,9 +69,10 @@ export function InventoryTable() {
         console.log('Inventory data fetched successfully:', responseData.length, 'items');
         setData(responseData);
       }
-    } catch (err: any) {
-      console.error('Error fetching inventory data:', err.message);
-      setError(err);
+    } catch (err: Error | unknown) {
+      const error = err as Error;
+      console.error('Error fetching inventory data:', error.message);
+      setError(error instanceof Error ? error : new Error(String(err)));
       console.log('Falling back to mock data due to error');
       setUseMockData(true);
       setData(mockInventoryData);
@@ -84,6 +84,7 @@ export function InventoryTable() {
   // Fetch data on component mount
   useEffect(() => {
     fetchInventoryData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Process data to extract subcomponents with parent component information

@@ -66,10 +66,11 @@ export async function GET() {
       }
     });
     
-  } catch (error: any) {
-    console.error('Error fetching inventory data:', error);
+  } catch (error: Error | unknown) {
+    const err = error as Error;
+    console.error('Error fetching inventory data:', err);
     return new NextResponse(
-      JSON.stringify({ error: error.message || 'Failed to fetch inventory data' }),
+      JSON.stringify({ error: err.message || 'Failed to fetch inventory data' }),
       { 
         status: 500,
         headers: {
