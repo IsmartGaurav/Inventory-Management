@@ -27,8 +27,10 @@ export function useInventory() {
         }
     );
     
-    // Use mock data as fallback when needed
-    const sourceData = useMockData || error ? mockInventoryData : data || [];
+    // Use mock data as fallback when needed - wrapped in useMemo to avoid dependency issues
+    const sourceData = useMemo(() => {
+        return useMockData || error ? mockInventoryData : data || [];
+    }, [useMockData, error, data]);
     
     // Toggle function with proper error handling
     const toggleMockData = async (useMock = !useMockData) => {

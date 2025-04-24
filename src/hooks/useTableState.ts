@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   getCoreRowModel,
   useReactTable,
@@ -9,7 +9,7 @@ import {
   getFilteredRowModel,
   SortingState,
   ColumnFiltersState,
-  TableOptions,
+
 } from '@tanstack/react-table';
 import { InventoryItem } from '@/types/inventory';
 import { useEnhancedSearch } from './useEnhancedSearch';
@@ -18,8 +18,8 @@ import { useEnhancedSearch } from './useEnhancedSearch';
  * Custom hook to manage table state and configuration
  * Extracts table state management logic from the table component
  */
-export function useTableState(
-  data: any[], 
+export function useTableState<TData>(
+  data: TData[], 
   columns: any[]
 ) {
   // Table state with optimization for performance
