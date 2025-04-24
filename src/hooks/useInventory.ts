@@ -43,12 +43,44 @@ export function useInventory() {
     
     // Completely redesigned data processing to create a grouped structure by parent component
     const processedData = useMemo(() => {
+        // Define interface for processed inventory items
+        interface ProcessedInventoryItem {
+            component_id: string;
+            component_name: string;
+            is_subcomponent: boolean;
+            parent_component_id: string | null;
+            updated_at?: string;
+            created_at?: string;
+            has_subcomponent: boolean;
+            hsn_code?: string;
+            sku_code?: string;
+            subcomponents: Subcomponent[];
+        }
+        
+        // Define interface for subcomponent
+        interface Subcomponent {
+            component_id: string;
+            component_name: string;
+            parent_component_id: string;
+            parent_component_name: string;
+            is_subcomponent: boolean;
+            has_subcomponent: boolean;
+            updated_at: string;
+            created_at: string;
+            hsn_code: string;
+            sku_code: string;
+            usable_quantity: number;
+            damaged_quantity: number;
+            discarded_quantity: number;
+            total_quantity: number;
+        }
+        
         // Create an array for grouped inventory items
-        const groupedItems: any[] = [];
+        const groupedItems: ProcessedInventoryItem[] = [];
         
         try {
             // Create a map to organize parents and their subcomponents
-            const parentMap = new Map<string, any>();
+            const parentMap = new Map<string, ProcessedInventoryItem>();
             
             // First pass: organize data by parent component
             for (const parent of inventoryData) {
@@ -77,6 +109,9 @@ export function useInventory() {
                 
                 // Get the parent object from the map
                 const parentObj = parentMap.get(parentId);
+                
+                // Skip if parent object wasn't found (shouldn't happen normally)
+                if (!parentObj) continue;
                 
                 // Process subcomponents
                 const subcomponents = Array.isArray(parent.subcomponents) ? parent.subcomponents : [];
@@ -121,7 +156,7 @@ export function useInventory() {
             // Convert parent map to array
             for (const parent of parentMap.values()) {
                 // Sort subcomponents by name for consistency
-                parent.subcomponents.sort((a: any, b: any) => {
+                parent.subcomponents.sort((a: Subcomponent, b: Subcomponent) => {
                     return (a.component_name || '').localeCompare(b.component_name || '');
                 });
                 

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  flexRender,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
@@ -14,7 +13,17 @@ import {
 import { Search, RefreshCw } from 'lucide-react';
 import { useInventory } from '@/hooks/useInventory';
 import { columns } from './columns';
-import { InventoryItem } from '@/types/inventory';
+
+// Define interface for subcomponent structure
+interface Subcomponent {
+  component_id: string;
+  component_name: string;
+  usable_quantity?: number;
+  damaged_quantity?: number;
+  discarded_quantity?: number;
+  total_quantity?: number;
+}
+
 
 export function InventoryTable() {
   // Table state with optimization for performance
@@ -172,11 +181,11 @@ export function InventoryTable() {
               
               // Get unique subcomponents (remove duplicates)
               const subcomponents = parent.subcomponents || [];
-              const uniqueSubcomponents = subcomponents.reduce((acc: any[], curr: any) => {
+              const uniqueSubcomponents = subcomponents.reduce((acc: Subcomponent[], curr: Subcomponent) => {
                 const exists = acc.find(item => item.component_id === curr.component_id);
                 if (!exists) acc.push(curr);
                 return acc;
-              }, []);
+              }, [] as Subcomponent[]);
               
               return (
                 <div key={row.id} className="mb-4 border border-gray-800 rounded-md">
@@ -188,7 +197,7 @@ export function InventoryTable() {
                   {/* Subcomponents with values */}
                   <div className="bg-black rounded-b-md">
                     {uniqueSubcomponents.length > 0 ? (
-                      uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                      uniqueSubcomponents.map((subItem: Subcomponent, subIndex: number) => (
                         <div key={`${parent.component_id}-${subItem.component_id}-${subIndex}`} 
                              className="border-t border-gray-800 p-3">
                           {/* Subcomponent name */}
@@ -342,7 +351,7 @@ export function InventoryTable() {
                     <td className="px-4 py-2 text-sm text-gray-300">
                       {uniqueSubcomponents.length > 0 ? (
                         <div className="flex flex-col gap-1">
-                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                          {uniqueSubcomponents.map((subItem: Subcomponent, subIndex: number) => (
                             <div key={`${subItem.component_id || subIndex}`}>
                               {subItem.component_name}
                             </div>
@@ -357,7 +366,7 @@ export function InventoryTable() {
                     <td className="px-4 py-2 text-sm">
                       {uniqueSubcomponents.length > 0 ? (
                         <div className="flex flex-col gap-1">
-                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                          {uniqueSubcomponents.map((subItem: Subcomponent, subIndex: number) => (
                             <div key={`${subItem.component_id || subIndex}-usable`}>
                               <span className="text-green-400">{subItem.usable_quantity || 0}</span>
                             </div>
@@ -372,7 +381,7 @@ export function InventoryTable() {
                     <td className="px-4 py-2 text-sm text-gray-300">
                       {uniqueSubcomponents.length > 0 ? (
                         <div className="flex flex-col gap-1">
-                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                          {uniqueSubcomponents.map((subItem: Subcomponent, subIndex: number) => (
                             <div key={`${subItem.component_id || subIndex}-damaged`}>
                               {subItem.damaged_quantity || 0}
                             </div>
@@ -387,7 +396,7 @@ export function InventoryTable() {
                     <td className="px-4 py-2 text-sm text-gray-300">
                       {uniqueSubcomponents.length > 0 ? (
                         <div className="flex flex-col gap-1">
-                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                          {uniqueSubcomponents.map((subItem: Subcomponent, subIndex: number) => (
                             <div key={`${subItem.component_id || subIndex}-discarded`}>
                               {subItem.discarded_quantity || 0}
                             </div>
@@ -402,7 +411,7 @@ export function InventoryTable() {
                     <td className="px-4 py-2 text-sm text-gray-300">
                       {uniqueSubcomponents.length > 0 ? (
                         <div className="flex flex-col gap-1">
-                          {uniqueSubcomponents.map((subItem: any, subIndex: number) => (
+                          {uniqueSubcomponents.map((subItem: Subcomponent, subIndex: number) => (
                             <div key={`${subItem.component_id || subIndex}-total`}>
                               {subItem.total_quantity || 0}
                             </div>
