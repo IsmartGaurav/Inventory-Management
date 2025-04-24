@@ -170,7 +170,6 @@ export function useInventory() {
                 return (a.component_name || '').localeCompare(b.component_name || '');
             });
             
-            console.log(`Processed ${groupedItems.length} parent components with subcomponents`);
         } catch (err) {
             console.error('Error processing inventory data:', err);
         }

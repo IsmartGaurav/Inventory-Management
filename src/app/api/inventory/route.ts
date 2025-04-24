@@ -4,12 +4,8 @@ export const fetchCache = 'force-no-store';
 
 export async function GET() {
   try {
-    console.log('API route called - attempting to fetch inventory data...');
-    
     // External API URL
     const API_URL = 'https://dev.electorq.com/dummy/inventory';
-    console.log('Fetching from:', API_URL);
-    
     // Create a timeout promise to avoid hanging API calls
     const timeout = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('API request timed out after 5 seconds')), 5000)
@@ -29,9 +25,7 @@ export async function GET() {
     
     // Use Promise.race to implement a timeout
     const response = await Promise.race([fetchPromise, timeout]) as Response;
-    
-    console.log('Response status:', response.status);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
     }
@@ -45,8 +39,7 @@ export async function GET() {
     if (!Array.isArray(responseJson)) {
       console.warn('API did not return an array, using empty array instead');
     }
-    console.log('Data fetched successfully:', data ? `${data.length} items` : 'No data');
-    
+   
     return new NextResponse(JSON.stringify(data), {
       status: 200,
       headers: {
